@@ -103,8 +103,28 @@ namespace moonk5
       }
     }; // struct moonk5::alsong::time_lyrics
 
+    struct song_list
+    {
+      std::string lyric_id = "";
+      std::string title = "";
+      std::string artist = "";
+      std::string album = "";
+      
+      std::string to_json_string() {
+        std::string str_json = "{";
+        str_json += "\"lyric_id\":\"" + lyric_id + "\",";
+        str_json += "\"title\":\"" + title + "\",";
+        str_json += "\"artist\":\"" + artist + "\",";
+        str_json += "\"album\":\"" + album + "\",";
+        str_json += "}";
+        return str_json;
+      }
+
+    }; // struct moonk5::alsong::song_list
+
     struct song_info
     {
+      std::string lyric_id = "";
       std::string title = "";
       std::string artist = "";
       std::string album = "";
@@ -133,6 +153,7 @@ namespace moonk5
 
       std::string to_json_string() {
         std::string str_json = "{";
+        str_json += "\"lyric_id\":\"" + lyric_id + "\",";
         str_json += "\"title\":\"" + title + "\",";
         str_json += "\"artist\":\"" + artist + "\",";
         str_json += "\"album\":\"" + album + "\",";
@@ -151,37 +172,51 @@ namespace moonk5
       const std::string URL =
         "http://lyrics.alsong.co.kr/alsongwebservice/service1.asmx";
 
-      const std::string SOAP_TEMPLATE =
+      const std::string ENC_DATA =
+        "7c2d15b8f51ac2f3b2a37d7a445c3158455defb8a58d621eb77a3ff8ae4921318e49cefe24e515f79892a4c29c9a3e204358698c1cfe79c151c04f9561e945096ccd1d1c0a8d8f265a2f3fa7995939b21d8f663b246bbc433c7589da7e68047524b80e16f9671b6ea0faaf9d6cde1b7dbcf1b89aa8a1d67a8bbc566664342e12";
+
+      const std::string SOAP_TEMPLATE_LYRIC_LIST =
         R"(<SOAP-ENV:Envelope
            xmlns:SOAP-ENV="http://www.w3.org/2003/05/soap-envelope"
            xmlns:SOAP-ENC="http://www.w3.org/2003/05/soap-encoding"
            xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-           xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+           xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+           xmlns:ns2="ALSongWebServer/Service1Soap"
+           xmlns:ns1="ALSongWebServer"
+           xmlns:ns3="ALSongWebServer/Service1Soap12">
            <SOAP-ENV:Body>
-           <GetResembleLyric2 xmlns="ALSongWebServer">
-           <stQuery>
-           <strTitle>$title</strTitle>
-           <strArtistName>$artist</strArtistName>
-           <nCurPage>0</nCurPage>
-           </stQuery>
-           </GetResembleLyric2>
+           <ns1:GetResembleLyricList2>
+           <ns1:encData>$encdata</ns1:encData>
+           <ns1:title>$title</ns1:title>
+           <ns1:artist>$artist</ns1:artist>
+           <ns1:pageNo>1</ns1:pageNo>
+           </ns1:GetResembleLyricList2>
+           </SOAP-ENV:Body>
+           </SOAP-ENV:Envelope>
+          )";
+      
+      const std::string SOAP_TEMPLATE_LYRIC_BY_ID =
+        R"(<SOAP-ENV:Envelope
+           xmlns:SOAP-ENV="http://www.w3.org/2003/05/soap-envelope"
+           xmlns:SOAP-ENC="http://www.w3.org/2003/05/soap-encoding"
+           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+           xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+           xmlns:ns2="ALSongWebServer/Service1Soap"
+           xmlns:ns1="ALSongWebServer"
+           xmlns:ns3="ALSongWebServer/Service1Soap12">
+           <SOAP-ENV:Body>
+           <ns1:GetLyricByID2>
+           <ns1:encData>$encdata</ns1:encData>
+           <ns1:lyricID>$lyricId</ns1:lyricID>
+           </ns1:GetLyricByID2>
            </SOAP-ENV:Body>
            </SOAP-ENV:Envelope>
           )";
 
-      CURLcode fetch(const std::string& title, const std::string& artist,
-          std::string &output, unsigned timeout=10) {
+     
+      CURLcode _fetch(const std::string& soap, std::string &output, unsigned timeout=10) {
         CURLcode result;
-        CURL *curl = nullptr;
-        
-        if (title.empty() || artist.empty())
-          result;
-
-        curl = curl_easy_init();
-        
-        std::string soap(SOAP_TEMPLATE);
-        soap = std::regex_replace(soap, std::regex("\\$title"), title);
-        soap = std::regex_replace(soap, std::regex("\\$artist"), artist);
+        CURL  *curl = curl_easy_init();
         
         struct curl_slist *headers = NULL;
         headers = curl_slist_append(headers,
@@ -201,6 +236,32 @@ namespace moonk5
         return result;
       }
 
+      CURLcode fetch_lyric_list(const std::string& title, const std::string& artist,
+          std::string &output) {
+        CURLcode result;
+        if (title.empty() || artist.empty())
+          return result;
+        
+        std::string soap(SOAP_TEMPLATE_LYRIC_LIST);
+        soap = std::regex_replace(soap, std::regex("\\$encdata"), ENC_DATA);
+        soap = std::regex_replace(soap, std::regex("\\$title"), title);
+        soap = std::regex_replace(soap, std::regex("\\$artist"), artist);
+        
+        return _fetch(soap, output, 20);
+      }
+
+      CURLcode fetch_lyric(const std::string& lyric_id, std::string &output) {
+        CURLcode result;
+        if (lyric_id.empty()) 
+          return result;  
+
+        std::string soap(SOAP_TEMPLATE_LYRIC_BY_ID);
+        soap = std::regex_replace(soap, std::regex("\\$encdata"), ENC_DATA);
+        soap = std::regex_replace(soap, std::regex("\\$lyricId"), lyric_id);
+        
+        return _fetch(soap, output, 20);
+      }
+
     private:
       static size_t write_data(char *buffer, size_t size,
           size_t nmemb, void *data) {
@@ -212,6 +273,10 @@ namespace moonk5
 
     class lyrics_serializer
     {
+      public:
+        std::vector<alsong::song_list> song_list_collection;
+        std::vector<alsong::song_info> song_collection;
+
       public:
         lyrics_serializer(const std::string& lyrics_path,
             unsigned int lyrics_count=3) {
@@ -225,53 +290,84 @@ namespace moonk5
 
           }
 
-        bool parse(const std::string& alsong_raw) {
+        bool parse_lyric_list(const std::string& alsong_raw) {
+          int count = 0;
           tinyxml2::XMLDocument doc;
           doc.Parse(alsong_raw.c_str(), alsong_raw.size());
-
+          
+          if (alsong_raw.find("GetResembleLyricList2Result") == std::string::npos) {
+            std::cerr << "SOAP Fault: missing tag, GetResembleLyricList2Result\n";
+            return false;
+          }
+          
           tinyxml2::XMLElement* result = 
             doc.FirstChildElement("soap:Envelope")
             ->FirstChildElement("soap:Body")
-            ->FirstChildElement("GetResembleLyric2Response")
-            ->FirstChildElement("GetResembleLyric2Result");
+            ->FirstChildElement("GetResembleLyricList2Response")
+            ->FirstChildElement("GetResembleLyricList2Result");
 
-          if (result == nullptr) {
-            std::cerr << "Invalid format, couldn't recognized target tag names\n";
-            return false;
-          }
-
-          int count = 0;
-          for (tinyxml2::XMLNode* child =
-              result->FirstChildElement("ST_GET_RESEMBLELYRIC2_RETURN");
-              child;
-              child = child->NextSiblingElement("ST_GET_RESEMBLELYRIC2_RETURN")) {
-            alsong::song_info song;
-            song.title = find_child(&child, "strTitle");
-            song.artist = find_child(&child, "strArtistName");
-            song.album = find_child(&child, "strAlbumName");
-            song.written_by = find_child(&child, "strRegisterName");
-            std::string lyrics_raw = find_child(&child, "strLyric");
-            parse_lyrics(lyrics_raw, song);
-
-            song_collection.push_back(song);
+          for (tinyxml2::XMLNode* child = result->FirstChildElement("ST_SEARCHLYRIC_LIST")
+              ; child
+              ; child = child->NextSiblingElement("ST_SEARCHLYRIC_LIST")) {
+            alsong::song_list list;
+            list.lyric_id = find_child(&child, "lyricID");
+            list.title = find_child(&child, "title");
+            list.artist = find_child(&child, "artist");
+            list.album = find_child(&child, "album");
+            song_list_collection.push_back(list);
 
             ++count;
             if (count >= max_lyrics_count)
               break;
           }
+
+          std::cout << "count = " << count << std::endl;
+          
+          return true;
+        }
+        
+        bool parse_lyric(const std::string& alsong_raw) {
+          tinyxml2::XMLDocument doc;
+          doc.Parse(alsong_raw.c_str(), alsong_raw.size());
+          
+          if (alsong_raw.find("GetLyricByID2Result") == std::string::npos) {
+            std::cerr << "SOAP Fault: missing tag, GetLyricByID2Result\n";
+            return false;
+          }
+
+          tinyxml2::XMLElement* result = 
+            doc.FirstChildElement("soap:Envelope")
+            ->FirstChildElement("soap:Body")
+            ->FirstChildElement("GetLyricByID2Response")
+            ->FirstChildElement("GetLyricByID2Result");
+          
+          tinyxml2::XMLNode* child = result->NextSibling();
+
+          alsong::song_info song;
+          song.lyric_id = find_child(&child, "lyricID");
+          song.title = find_child(&child, "title");
+          song.artist = find_child(&child, "artist");
+          song.album = find_child(&child, "album");
+          song.written_by = find_child(&child, "registerName");
+          std::string lyrics_raw = find_child(&child, "lyric");
+          parse_lyrics(lyrics_raw, song);
+
+          //std::cout << song.to_json_string() << std::endl;
+          song_collection.push_back(song);
+          
           return true;
         }
 
         // serialization
         // transformates a song_info object in memory to a file
-        bool write(bool overwrite=false) {
+        bool write(const std::string& title, const std::string& artist,
+            bool overwrite=false) {
           if (song_collection.size() <= 0)
             return false;
-
+          
           // file nameing convention
           // 'artist - title.lyrics' 
-          std::string filename = create_filename(song_collection[0].artist,
-              song_collection[0].title);
+          std::string filename = create_filename(artist, title);
           std::filesystem::path lyrics_path = lyrics_folder_path / filename;
           if (std::filesystem::exists(lyrics_path) && overwrite == false) {
             std::cerr << "moonk5::alsong::lyrics_serializer::write() - "
@@ -284,7 +380,13 @@ namespace moonk5
           }
           return true;
         }
-
+        
+        bool write(bool overwrite=false) {
+          if (song_collection.size() <= 0)
+            return false;
+          return write(song_collection[0].title, song_collection[0].artist, overwrite);
+        }
+        
         //deserialize
         // transformates a lyrics file into a song_info object
         bool read(const std::string& title, const std::string& artist) {
@@ -377,9 +479,7 @@ namespace moonk5
         }
 
         std::filesystem::path lyrics_folder_path;
-        unsigned int max_lyrics_count;
-        std::vector<alsong::song_info> song_collection;
-
+        unsigned int max_lyrics_count; 
     }; // class moonk5::alsong::lyrics_serializer
   }
 }
