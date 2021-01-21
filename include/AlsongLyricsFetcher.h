@@ -71,9 +71,9 @@ namespace moonk5
 
     unsigned int to_milliseconds(const std::string& time_in_str) {
       unsigned int milliseconds = 0;
-      milliseconds += stoi(time_in_str.substr(1, 2)) * 60 * 1000;  // mins
-      milliseconds += stoi(time_in_str.substr(4, 2)) * 1000;       // secs
-      milliseconds += stoi(time_in_str.substr(7, 2));              // mils
+      milliseconds += stoi(time_in_str.substr(0, 2)) * 60 * 1000;  // mins
+      milliseconds += stoi(time_in_str.substr(3, 2)) * 1000;       // secs
+      milliseconds += stoi(time_in_str.substr(6, 2));              // mils
 
       return milliseconds;
     }
