@@ -129,7 +129,7 @@ namespace moonk5
       std::string artist = "";
       std::string album = "";
       std::string written_by = "";
-
+      int delay = 0;
       unsigned int language_count = 0;
       std::vector<time_lyrics> lyrics_collection;
 
@@ -158,6 +158,7 @@ namespace moonk5
         str_json += "\"artist\":\"" + artist + "\",";
         str_json += "\"album\":\"" + album + "\",";
         str_json += "\"written_by\":\"" + written_by + "\",";
+        str_json += "\"delay\":" + std::to_string(delay) + ",";
         str_json += "\"lyrics\":[";
         for (alsong::time_lyrics tl : lyrics_collection)
           str_json += tl.to_json_string() + ",";
@@ -317,7 +318,7 @@ namespace moonk5
             song_list_collection.push_back(list);
 
             ++count;
-            if (count >= max_lyrics_count)
+            if (count >= 50)
               break;
           }
 
@@ -349,6 +350,7 @@ namespace moonk5
           song.artist = find_child(&child, "artist");
           song.album = find_child(&child, "album");
           song.written_by = find_child(&child, "registerName");
+          song.delay = 0;
           std::string lyrics_raw = find_child(&child, "lyric");
           parse_lyrics(lyrics_raw, song);
 
@@ -407,6 +409,7 @@ namespace moonk5
               song.artist = s.at("artist");
               song.album = s.at("album");
               song.written_by = s.at("written_by");
+              song.delay = s.at("delay");
               auto& tls = s.at("lyrics");
               for (auto&& tl : tls) {
                 auto& ls = tl.at("lyrics");

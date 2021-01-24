@@ -35,6 +35,6 @@ int main(int argc, char *argv[])
   lyrics_serializer.read(title, artist);
 
   std::cout << lyrics_serializer.to_json_string() << std::endl;
-  
+
   return 0;
 }
